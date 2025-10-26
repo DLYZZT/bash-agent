@@ -2,18 +2,36 @@ from dataclasses import dataclass
 import os, json, shlex, subprocess, sys, time, pathlib
 from openai import OpenAI
 from dotenv import load_dotenv
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+from rich.prompt import Prompt
+from rich.status import Status
+from rich.syntax import Syntax
+from rich.table import Table
+from rich import print as rprint
 
+
+console = Console()
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    print("Missing OPENAI_API_KEY. Put it in .env or your environment.")
+    console.print("[bold red]❌ 错误: 缺少 OPENAI_API_KEY[/bold red]")
+    console.print("请在 .env 文件或环境变量中设置 OPENAI_API_KEY")
     sys.exit(1)
 
 WORK_DIR = os.getenv("WORK_DIR", "./work")
-print(f"Using WORK_DIR: {WORK_DIR}")
 CONFIRM_BEFORE_EXEC = os.getenv("CONFIRM_BEFORE_EXEC", "yes").lower() == "yes"
 pathlib.Path(WORK_DIR).mkdir(parents=True, exist_ok=True)
+
+console.print(Panel.fit(
+    f"[bold green]🚀 Bash Agent 启动成功![/bold green]\n"
+    f"[cyan]工作目录:[/cyan] {WORK_DIR}\n"
+    f"[cyan]确认执行:[/cyan] {'是' if CONFIRM_BEFORE_EXEC else '否'}",
+    title="[bold blue]配置信息[/bold blue]",
+    border_style="blue"
+))
 
 client = OpenAI()
 
@@ -28,7 +46,7 @@ def is_obviously_dangerous(cmd: str) -> bool:
         return True
     if any(tok in low for tok in DANGEROUS_TOKENS):
         return True
-    # 写根目录或越界：粗略防护
+
     if " /etc" in low or " /root" in low:
         return True
     return False
@@ -113,9 +131,20 @@ def load_system():
 def confirm(cmd: str) -> bool:
     if not CONFIRM_BEFORE_EXEC:
         return True
-    print(f"\nAbout to execute:\n  {cmd}\nProceed? [y/N] ", end="", flush=True)
-    ans = sys.stdin.readline().strip().lower()
-    return ans in ("y", "yes")
+    
+    console.print(Panel(
+        Syntax(cmd, "bash", theme="monokai", line_numbers=False),
+        title="[bold yellow]⚠️  即将执行命令[/bold yellow]",
+        border_style="yellow"
+    ))
+    
+    try:
+        ans = Prompt.ask("是否继续执行", choices=["y", "yes", "n", "no"], default="n").lower()
+        return ans in ("y", "yes")
+    except (EOFError, KeyboardInterrupt):
+        console.print("[bold red]输入被中断，默认不执行命令[/bold red]")
+        return False
+
 def tool_loop(user_input: str):
     messages = [load_system(), {"role": "user", "content": user_input}]
     while True:
@@ -124,7 +153,7 @@ def tool_loop(user_input: str):
         tool_calls = msg.tool_calls or []
 
         if not tool_calls:
-            print(f"\nAssistant:\n{msg.content or ''}")
+            console.print(f"[bold green]🤖 Agent:[/bold green] {msg.content or ''}")
             break
 
         messages.append({
@@ -163,9 +192,24 @@ def tool_loop(user_input: str):
                     }
                 else:
                     if confirm(command):
-                        result = run_bash(command, timeout_s=timeout_s)
+                        with Status("[bold blue]执行命令中...", spinner="dots"):
+                            result = run_bash(command, timeout_s=timeout_s)
+
+                        if result.exit_code == 0 and result.ran:
+                            console.print("[bold green]✅ 命令执行成功[/bold green]")
+                        else:
+                            console.print("[bold red]❌ 命令执行失败[/bold red]")
+                        
+                        if result.stdout:
+                            console.print(f"[cyan]输出:[/cyan] {result.stdout}")
+                        if result.stderr:
+                            console.print(f"[red]错误:[/red] {result.stderr}")
+                        if result.reason:
+                            console.print(f"[yellow]原因:[/yellow] {result.reason}")
                     else:
                         result = BashResult("", "user declined", 1, ran=False, reason="declined")
+                        console.print("[bold yellow]⏸️  用户取消了命令执行[/bold yellow]")
+                    
                     payload = {
                         "ok": result.exit_code == 0 and result.ran,
                         "ran": result.ran,
@@ -192,16 +236,27 @@ def tool_loop(user_input: str):
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         user_query = " ".join(sys.argv[1:])
+        console.print(Panel(
+            f"[bold cyan]用户查询:[/bold cyan] {user_query}",
+            title="[bold blue]🎯 任务[/bold blue]",
+            border_style="blue"
+        ))
         tool_loop(user_query)
     else:
-        print("Bash Agent. Type your goal or `exit` to quit.")
+        console.print(Panel.fit(
+            "[bold green]欢迎使用 Bash Agent![/bold green]"
+            "输入你的目标或输入 [bold red]exit[/bold red] 退出",
+            title="[bold blue]🚀 Bash Agent[/bold blue]",
+            border_style="blue"
+        ))
+        
         while True:
             try:
-                user_input = input("\nYou> ").strip()
+                user_input = Prompt.ask("[bold cyan]👤 User[/bold cyan]").strip()
             except (EOFError, KeyboardInterrupt):
-                print("\nBye.")
+                console.print("\\n[bold yellow]👋 再见![/bold yellow]")
                 break
             if user_input.lower() in ("exit", "quit"):
-                print("Bye.")
+                console.print("[bold yellow]👋 再见![/bold yellow]")
                 break
             tool_loop(user_input)
