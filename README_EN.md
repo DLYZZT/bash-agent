@@ -4,12 +4,13 @@ Bash Agent - Intelligent Command Execution Agent.
 
 ## Features
 
-- 🤖 **Intelligent Command Execution**: Uses LLM to understand natural language instructions and generate corresponding Bash commands
+- 🤖 **Intelligent Command Execution**: Uses LLM to understand natural language instructions and generate corresponding Shell commands
 - 🔒 **Security Protection**: Built-in multiple security mechanisms to prevent dangerous command execution
 - 📁 **Isolated Work Environment**: All commands execute in a specified working directory to avoid accidental system file operations
 - ⚡ **Interactive Experience**: Supports REPL mode and single command execution
 - 🛡️ **Command Confirmation**: Configurable pre-execution confirmation mechanism to prevent accidental operations
 - 📊 **Detailed Feedback**: Provides command execution results, error messages, and exit codes
+- 🌐 **Cross-Platform Support**: Automatically detects the operating system (macOS/Linux/Windows) and executes appropriate commands for each platform
 
 ## Security Mechanisms
 

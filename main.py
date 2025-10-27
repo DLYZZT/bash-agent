@@ -1,15 +1,12 @@
 from dataclasses import dataclass
-import os, json, shlex, subprocess, sys, time, pathlib
+import os, json, shlex, subprocess, sys, time, pathlib, platform
 from openai import OpenAI
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
-from rich.text import Text
 from rich.prompt import Prompt
 from rich.status import Status
 from rich.syntax import Syntax
-from rich.table import Table
-from rich import print as rprint
 
 
 console = Console()
@@ -25,8 +22,23 @@ WORK_DIR = os.getenv("WORK_DIR", "./work")
 CONFIRM_BEFORE_EXEC = os.getenv("CONFIRM_BEFORE_EXEC", "yes").lower() == "yes"
 pathlib.Path(WORK_DIR).mkdir(parents=True, exist_ok=True)
 
+def get_os_info():
+    system = platform.system()
+    if system == "Darwin":
+        return "macOS", "bash"
+    elif system == "Linux":
+        return "Linux", "bash"
+    elif system == "Windows":
+        return "Windows", "cmd"
+    else:
+        return system, "bash"
+
+OS_NAME, SHELL_TYPE = get_os_info()
+
 console.print(Panel.fit(
     f"[bold green]🚀 Bash Agent 启动成功![/bold green]\n"
+    f"[cyan]操作系统:[/cyan] {OS_NAME}\n"
+    f"[cyan]Shell类型:[/cyan] {SHELL_TYPE}\n"
     f"[cyan]工作目录:[/cyan] {WORK_DIR}\n"
     f"[cyan]确认执行:[/cyan] {'是' if CONFIRM_BEFORE_EXEC else '否'}",
     title="[bold blue]配置信息[/bold blue]",
@@ -77,15 +89,28 @@ def run_bash(command: str, timeout_s: int = 30) -> BashResult:
         return BashResult("", "blocked: dangerous command", 1, ran=False, reason="dangerous")
 
     try:
-        proc = subprocess.run(
-            command,
-            cwd=WORK_DIR,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=timeout_s,
-            env=os.environ.copy(),
-        )
+        if SHELL_TYPE == "cmd":
+            proc = subprocess.run(
+                command,
+                cwd=WORK_DIR,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout_s,
+                env=os.environ.copy(),
+                executable="cmd.exe"
+            )
+        else:
+            proc = subprocess.run(
+                command,
+                cwd=WORK_DIR,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout_s,
+                env=os.environ.copy(),
+                executable="/bin/bash"
+            )
         return BashResult(proc.stdout, proc.stderr, proc.returncode, ran=True)
     except subprocess.TimeoutExpired:
         return BashResult("", f"timeout > {timeout_s}s", 124, ran=False, reason="timeout")
@@ -97,11 +122,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "bash_exec",
-            "description": f"Execute a bash command inside the isolated working directory: {WORK_DIR}",
+            "description": f"Execute a shell command inside the isolated working directory: {WORK_DIR}. Current OS: {OS_NAME}, Shell: {SHELL_TYPE}. Use appropriate commands for the OS (e.g., 'ls' for macOS/Linux, 'dir' for Windows).",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "command": {"type": "string", "description": "The bash command string to execute"},
+                    "command": {"type": "string", "description": f"The shell command string to execute (using {SHELL_TYPE})"},
                     "timeout_s": {"type": "integer", "description": "Timeout seconds (default 30)", "minimum": 1},
                 },
                 "required": ["command"],
@@ -126,6 +151,8 @@ def load_system():
     text = sys_path.read_text(encoding="utf-8")
     text = text.replace("${WORK_DIR}", str(pathlib.Path(WORK_DIR).resolve()))
     text = text.replace("${NOW_ISO}", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    text = text.replace("${OS_NAME}", OS_NAME)
+    text = text.replace("${SHELL_TYPE}", SHELL_TYPE)
     return {"role": "system", "content": text}
 
 def confirm(cmd: str) -> bool:
