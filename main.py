@@ -35,18 +35,8 @@ def get_os_info():
 
 OS_NAME, SHELL_TYPE = get_os_info()
 
-console.print(Panel.fit(
-    f"[bold green]🚀 Bash Agent 启动成功![/bold green]\n"
-    f"[cyan]操作系统:[/cyan] {OS_NAME}\n"
-    f"[cyan]Shell类型:[/cyan] {SHELL_TYPE}\n"
-    f"[cyan]工作目录:[/cyan] {WORK_DIR}\n"
-    f"[cyan]确认执行:[/cyan] {'是' if CONFIRM_BEFORE_EXEC else '否'}",
-    title="[bold blue]配置信息[/bold blue]",
-    border_style="blue"
-))
-
 client = OpenAI()
-
+messages = []
 
 DENY_PATTERNS = [
     "rm -rf /", "rm -rf /*", ":(){:|:&};:",
@@ -173,7 +163,9 @@ def confirm(cmd: str) -> bool:
         return False
 
 def tool_loop(user_input: str):
-    messages = [load_system(), {"role": "user", "content": user_input}]
+    global messages
+    messages.append({"role": "user", "content": user_input})
+    
     while True:
         resp = call_model(messages)
         msg = resp.choices[0].message
@@ -261,6 +253,18 @@ def tool_loop(user_input: str):
                 })
 
 if __name__ == "__main__":
+    messages.append(load_system())
+    console.print(Panel.fit(
+        f"[bold green]🚀 Bash Agent 启动成功![/bold green]\n\n"
+        f"[cyan]操作系统:[/cyan] {OS_NAME}\n"
+        f"[cyan]Shell类型:[/cyan] {SHELL_TYPE}\n"
+        f"[cyan]工作目录:[/cyan] {WORK_DIR}\n"
+        f"[cyan]确认执行:[/cyan] {'是' if CONFIRM_BEFORE_EXEC else '否'}\n\n"
+        f"[dim]输入 [bold red]/exit[/bold red] 退出 | 输入 [bold yellow]/clear[/bold yellow] 清空对话历史[/dim]",
+        title="[bold blue]Bash Agent[/bold blue]",
+        border_style="blue"
+    ))
+    
     if len(sys.argv) > 1:
         user_query = " ".join(sys.argv[1:])
         console.print(Panel(
@@ -270,12 +274,6 @@ if __name__ == "__main__":
         ))
         tool_loop(user_query)
     else:
-        console.print(Panel.fit(
-            "[bold green]欢迎使用 Bash Agent![/bold green]"
-            "输入你的目标或输入 [bold red]exit[/bold red] 退出",
-            title="[bold blue]🚀 Bash Agent[/bold blue]",
-            border_style="blue"
-        ))
         
         while True:
             try:
@@ -283,7 +281,12 @@ if __name__ == "__main__":
             except (EOFError, KeyboardInterrupt):
                 console.print("\\n[bold yellow]👋 再见![/bold yellow]")
                 break
-            if user_input.lower() in ("exit", "quit"):
+            if user_input.lower() in ("/exit", "quit"):
                 console.print("[bold yellow]👋 再见![/bold yellow]")
                 break
+            if user_input.lower() == "/clear":
+                messages.clear()
+                messages.append(load_system())
+                console.print("[bold green]✨ 对话历史已清空[/bold green]")
+                continue
             tool_loop(user_input)
