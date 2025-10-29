@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/username/Desktop",
+        "/Users/username/Downloads"
+      ]
+    },
+    "weather": {
+      "command": "python",
+      "args": [
+        "/path/to/weather-server.py"
+      ]
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "/path/to/database.db"
+      ]
+    }
+  }
+}
+

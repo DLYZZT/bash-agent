@@ -11,6 +11,7 @@ Bash Agent 命令执行智能体。
 - 🛡️ **命令确认**：可配置执行前确认机制，防止意外操作
 - 📊 **详细反馈**：提供命令执行结果、错误信息和退出码
 - 🌐 **跨平台支持**：自动识别操作系统（macOS/Linux/Windows），根据平台执行相应的命令
+- 🔌 **MCP 集成**：支持连接 Model Context Protocol (MCP) 服务器，扩展工具能力
 
 ## 安全机制
 
@@ -56,6 +57,9 @@ WORK_DIR=./work
 
 # 执行前确认（可选，默认为 yes）
 CONFIRM_BEFORE_EXEC=yes
+
+# MCP 配置文件路径（可选，默认为 ./mcp_config.json）
+MCP_CONFIG_PATH=./mcp_config.json
 ```
 
 ## 使用方法
@@ -84,11 +88,103 @@ python main.py "列出当前目录下的所有文件"
 You> 创建一个名为 hello.py 的 Python 文件，内容包含一个简单的 hello world 函数
 ```
 
+## MCP 集成
+
+Bash Agent 现在支持 Model Context Protocol (MCP)，可以同时连接多个 MCP 服务器并使用它们提供的工具。
+
+### 什么是 MCP？
+
+Model Context Protocol (MCP) 是一个开放协议，允许 AI 应用程序与外部工具和数据源进行标准化集成。通过 MCP，Bash Agent 可以：
+
+- 同时连接多个 MCP 服务器
+- 使用服务器提供的工具（如数据库查询、API 调用、文件操作等）
+- 扩展 Agent 的能力，无需修改核心代码
+- 使用 MCP 生态系统中的官方和社区服务器
+
+### 配置 MCP 服务器
+
+1. **创建配置文件**
+
+   在项目根目录创建 `mcp_config.json` 文件：
+   ```json
+   {
+     "mcpServers": {
+       "filesystem": {
+         "command": "npx",
+         "args": [
+           "-y",
+           "@modelcontextprotocol/server-filesystem",
+           "/Users/username/Desktop",
+           "/Users/username/Downloads"
+         ]
+       },
+       "sqlite": {
+         "command": "npx",
+         "args": [
+           "-y",
+           "@modelcontextprotocol/server-sqlite",
+           "/path/to/database.db"
+         ]
+       }
+     }
+   }
+   ```
+
+   **配置说明**：
+   - 可以配置多个 MCP 服务器
+   - 每个服务器需要指定 `command` 和 `args`
+   - 支持 Node.js (`npx`) 和 Python (`python`) 服务器
+   - 可选配置 `env` 环境变量
+
+2. **启动 Bash Agent**
+
+   配置后启动 Bash Agent，它会自动连接到所有配置的 MCP 服务器：
+   ```bash
+   python main.py
+   ```
+
+   如果连接成功，你会看到：
+   ```
+   📡 正在连接 2 个 MCP 服务器...
+   ✅ 已连接到 MCP 服务器 'filesystem'
+      工具: ['read_file', 'write_file', 'list_directory']
+   ✅ 已连接到 MCP 服务器 'sqlite'
+      工具: ['query', 'execute']
+   ✨ 成功连接 2/2 个 MCP 服务器
+   ```
+
+### MCP 架构
+
+```
+┌─────────────────┐
+│  Bash Agent     │
+│  (OpenAI LLM)   │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌────────┐ ┌──────────────┐
+│  bash  │ │ MCP Client   │
+│  exec  │ │              │
+└────────┘ └──────┬───────┘
+                  │
+                  ▼
+           ┌──────────────┐
+           │ MCP Server   │
+           │              │
+           │ - Tool 1     │
+           │ - Tool 2     │
+           │ - Tool N     │
+           └──────────────┘
+```
+
 ## 项目结构
 
 ```
 bash-agent/
 ├── main.py              # 主程序文件
+├── mcp_client.py        # MCP 客户端模块
 ├── requirements.txt     # Python 依赖
 ├── prompts/
 │   └── system.md       # 系统提示词
