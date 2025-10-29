@@ -297,7 +297,8 @@ def tool_loop(user_input: str):
                                 if item.get("type") == "text":
                                     text = item.get("text", "")
                                     if text:
-                                        console.print(f"[cyan]返回:[/cyan] {text[:500]}{'...' if len(text) > 500 else ''}")
+                                        pass
+                                        # console.print(f"[cyan]返回:[/cyan] {text[:500]}{'...' if len(text) > 500 else ''}")
                         
                         payload = {
                             "ok": True,
