@@ -19,6 +19,7 @@ if not OPENAI_API_KEY:
     sys.exit(1)
 
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+MODEL_TEMPERATURE = os.getenv("MODEL_TEMPERATURE", 0.2)
 WORK_DIR = os.getenv("WORK_DIR", "./work")
 CONFIRM_BEFORE_EXEC = os.getenv("CONFIRM_BEFORE_EXEC", "yes").lower() == "yes"
 MCP_CONFIG_PATH = os.getenv("MCP_CONFIG_PATH", "./mcp_config.json")
@@ -43,6 +44,14 @@ OS_NAME, SHELL_TYPE = get_os_info()
 
 client = OpenAI()
 messages = []
+
+# Token 使用统计
+token_stats = {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "api_calls": 0
+}
 
 if mcp_manager:
     try:
@@ -154,13 +163,23 @@ def get_available_tools():
 TOOLS = get_available_tools()
 
 def call_model(messages, tool_choice="auto"):
-    return client.chat.completions.create(
+    global token_stats
+    response = client.chat.completions.create(
         model=OPENAI_MODEL,
         messages=messages,
         tools=TOOLS,
         tool_choice=tool_choice,
-        temperature=0.2,
+        temperature=float(MODEL_TEMPERATURE),
     )
+    
+    # 记录 token 使用情况
+    if response.usage:
+        token_stats["prompt_tokens"] += response.usage.prompt_tokens
+        token_stats["completion_tokens"] += response.usage.completion_tokens
+        token_stats["total_tokens"] += response.usage.total_tokens
+        token_stats["api_calls"] += 1
+    
+    return response
 
 def load_system():
     sys_path = pathlib.Path(__file__).parent / "prompts" / "system.md"
@@ -173,10 +192,43 @@ def load_system():
 
 def setup_readline():
     try:
-        # 绑定 Ctrl+L 到清屏函数（readline 内置功能）
+        # 绑定 Ctrl+L 到清屏函数
         readline.parse_and_bind(r'"\C-l": clear-screen')
     except Exception:
         pass
+
+def show_token_stats():
+    """显示 Token 使用统计"""
+    global token_stats
+    
+    if token_stats["api_calls"] == 0:
+        return
+    
+    # 计算成本
+    cost_per_1k_prompt = 0.00015  # $0.15 per 1M tokens
+    cost_per_1k_completion = 0.0006  # $0.60 per 1M tokens
+    
+    prompt_cost = (token_stats["prompt_tokens"] / 1000) * cost_per_1k_prompt
+    completion_cost = (token_stats["completion_tokens"] / 1000) * cost_per_1k_completion
+    total_cost = prompt_cost + completion_cost
+    
+    stats_text = (
+        f"[bold cyan]📊 Token 使用统计[/bold cyan]\n\n"
+        f"[cyan]API 调用次数:[/cyan] {token_stats['api_calls']}\n"
+        f"[cyan]输入 Tokens:[/cyan] {token_stats['prompt_tokens']:,}\n"
+        f"[cyan]输出 Tokens:[/cyan] {token_stats['completion_tokens']:,}\n"
+        f"[cyan]总计 Tokens:[/cyan] {token_stats['total_tokens']:,}\n"
+        f"[cyan]预估成本:[/cyan] ${total_cost:.6f} USD"
+    )
+    
+    if OPENAI_MODEL != "gpt-4o-mini":
+        stats_text += f"\n[dim]注意: 成本按 gpt-4o-mini 价格估算，实际使用模型: {OPENAI_MODEL}[/dim]"
+    
+    console.print(Panel.fit(
+        stats_text,
+        title="[bold blue]会话统计[/bold blue]",
+        border_style="blue"
+    ))
 
 def confirm(cmd: str) -> bool:
     if not CONFIRM_BEFORE_EXEC:
@@ -366,7 +418,7 @@ if __name__ == "__main__":
             + mcp_details
         )
         
-        startup_info += "\n[dim]输入 [bold red]/exit[/bold red] 退出 | 输入 [bold yellow]/clear[/bold yellow] 清空对话历史 | 按 [bold green]Ctrl+L[/bold green] 清屏[/dim]"
+        startup_info += "\n[dim]输入 [bold red]/exit[/bold red] 退出 | 输入 [bold yellow]/clear[/bold yellow] 清空对话历史 | 输入 [bold cyan]/stats[/bold cyan] 查看统计 | 按 [bold green]Ctrl+L[/bold green] 清屏[/dim]"
         
         console.print(Panel.fit(
             startup_info,
@@ -382,21 +434,33 @@ if __name__ == "__main__":
                 border_style="blue"
             ))
             tool_loop(user_query)
+            show_token_stats()
         else:
             
             while True:
                 try:
                     user_input = input("\033[1;36m👤 User:\033[0m ").strip()
                 except (EOFError, KeyboardInterrupt):
-                    console.print("\\n[bold yellow]👋 再见![/bold yellow]")
+                    console.print("\n[bold yellow]👋 再见![/bold yellow]")
+                    show_token_stats()
                     break
                 if user_input.lower() in ("/exit", "quit"):
                     console.print("[bold yellow]👋 再见![/bold yellow]")
+                    show_token_stats()
                     break
                 if user_input.lower() == "/clear":
+                    show_token_stats()
                     messages.clear()
                     messages.append(load_system())
-                    console.print("[bold green]✨ 对话历史已清空[/bold green]")
+
+                    token_stats["prompt_tokens"] = 0
+                    token_stats["completion_tokens"] = 0
+                    token_stats["total_tokens"] = 0
+                    token_stats["api_calls"] = 0
+                    console.print("[bold green]✨ 对话历史已清空，Token 统计已重置[/bold green]")
+                    continue
+                if user_input.lower() == "/stats":
+                    show_token_stats()
                     continue
                 tool_loop(user_input)
     

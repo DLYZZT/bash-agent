@@ -12,6 +12,7 @@ Bash Agent - Intelligent Command Execution Agent.
 - 📊 **Detailed Feedback**: Provides command execution results, error messages, and exit codes
 - 🌐 **Cross-Platform Support**: Automatically detects the operating system (macOS/Linux/Windows) and executes appropriate commands for each platform
 - 🔌 **MCP Integration**: Supports connecting to Model Context Protocol (MCP) servers to extend tool capabilities
+- 💰 **Token Statistics**: Real-time tracking of API calls, token consumption, and estimated costs
 
 ## Security Mechanisms
 
@@ -55,6 +56,9 @@ OPENAI_API_KEY=your_openai_api_key_here
 # OpenAI model name (optional, defaults to gpt-4o-mini)
 OPENAI_MODEL=gpt-4o-mini
 
+# Model temperature parameter (optional, defaults to 0.2)
+MODEL_TEMPERATURE=0.2
+
 # Working directory (optional, defaults to ./work)
 WORK_DIR=./work
 
@@ -89,6 +93,11 @@ python main.py "List all files in the current directory"
 #### File Operations
 ```bash
 You> Create a Python file named hello.py with content containing a simple hello world function
+```
+
+#### View Token Statistics
+```bash
+You> /stats
 ```
 
 ## MCP Integration
