@@ -19,6 +19,7 @@ if not OPENAI_API_KEY:
     console.print("请在 .env 文件或环境变量中设置 OPENAI_API_KEY")
     sys.exit(1)
 
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 WORK_DIR = os.getenv("WORK_DIR", "./work")
 CONFIRM_BEFORE_EXEC = os.getenv("CONFIRM_BEFORE_EXEC", "yes").lower() == "yes"
 MCP_CONFIG_PATH = os.getenv("MCP_CONFIG_PATH", "./mcp_config.json")
@@ -155,7 +156,7 @@ TOOLS = get_available_tools()
 
 def call_model(messages, tool_choice="auto"):
     return client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=OPENAI_MODEL,
         messages=messages,
         tools=TOOLS,
         tool_choice=tool_choice,
@@ -350,6 +351,7 @@ if __name__ == "__main__":
         
         startup_info = (
             f"[bold green]🚀 Bash Agent 启动成功![/bold green]\n\n"
+            f"[cyan]模型:[/cyan] {OPENAI_MODEL}\n"
             f"[cyan]操作系统:[/cyan] {OS_NAME}\n"
             f"[cyan]Shell类型:[/cyan] {SHELL_TYPE}\n"
             f"[cyan]工作目录:[/cyan] {WORK_DIR}\n"

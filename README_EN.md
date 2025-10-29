@@ -52,6 +52,9 @@ cp .env.example .env
 # OpenAI API Key (required)
 OPENAI_API_KEY=your_openai_api_key_here
 
+# OpenAI model name (optional, defaults to gpt-4o-mini)
+OPENAI_MODEL=gpt-4o-mini
+
 # Working directory (optional, defaults to ./work)
 WORK_DIR=./work
 

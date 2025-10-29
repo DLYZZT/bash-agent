@@ -52,6 +52,9 @@ cp .env.example .env
 # OpenAI API 密钥（必需）
 OPENAI_API_KEY=your_openai_api_key_here
 
+# OpenAI 模型名称（可选，默认为 gpt-4o-mini）
+OPENAI_MODEL=gpt-4o-mini
+
 # 工作目录（可选，默认为 ./work）
 WORK_DIR=./work
 
