@@ -73,7 +73,7 @@ class MCPServerConnection:
             ]
             
             print(f"✅ 已连接到 MCP 服务器 '{self.name}'")
-            print(f"   工具: {[tool['name'] for tool in self.available_tools]}")
+            # print(f"   工具: {[tool['name'] for tool in self.available_tools]}")
             
             return True
             

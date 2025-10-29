@@ -154,7 +154,6 @@ def get_available_tools():
 TOOLS = get_available_tools()
 
 def call_model(messages, tool_choice="auto"):
-    print(messages,TOOLS)
     return client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
