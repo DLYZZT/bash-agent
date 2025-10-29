@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-import os, json, shlex, subprocess, sys, time, pathlib, platform
+import os, json, shlex, subprocess, sys, time, pathlib, platform, readline
 from openai import OpenAI
 from dotenv import load_dotenv
 from rich.console import Console
@@ -8,7 +8,6 @@ from rich.prompt import Prompt
 from rich.status import Status
 from rich.syntax import Syntax
 from mcp_client import MCPClientManager
-
 
 console = Console()
 
@@ -163,7 +162,6 @@ def call_model(messages, tool_choice="auto"):
         temperature=0.2,
     )
 
-
 def load_system():
     sys_path = pathlib.Path(__file__).parent / "prompts" / "system.md"
     text = sys_path.read_text(encoding="utf-8")
@@ -172,6 +170,13 @@ def load_system():
     text = text.replace("${OS_NAME}", OS_NAME)
     text = text.replace("${SHELL_TYPE}", SHELL_TYPE)
     return {"role": "system", "content": text}
+
+def setup_readline():
+    try:
+        # 绑定 Ctrl+L 到清屏函数（readline 内置功能）
+        readline.parse_and_bind(r'"\C-l": clear-screen')
+    except Exception:
+        pass
 
 def confirm(cmd: str) -> bool:
     if not CONFIRM_BEFORE_EXEC:
@@ -336,8 +341,9 @@ def tool_loop(user_input: str):
 
 if __name__ == "__main__":
     try:
-        messages.append(load_system())
+        setup_readline()
         
+        messages.append(load_system())
         mcp_status = "未连接"
         mcp_details = ""
         
@@ -360,7 +366,7 @@ if __name__ == "__main__":
             + mcp_details
         )
         
-        startup_info += "\n[dim]输入 [bold red]/exit[/bold red] 退出 | 输入 [bold yellow]/clear[/bold yellow] 清空对话历史[/dim]"
+        startup_info += "\n[dim]输入 [bold red]/exit[/bold red] 退出 | 输入 [bold yellow]/clear[/bold yellow] 清空对话历史 | 按 [bold green]Ctrl+L[/bold green] 清屏[/dim]"
         
         console.print(Panel.fit(
             startup_info,
@@ -380,7 +386,7 @@ if __name__ == "__main__":
             
             while True:
                 try:
-                    user_input = Prompt.ask("[bold cyan]👤 User[/bold cyan]").strip()
+                    user_input = input("\033[1;36m👤 User:\033[0m ").strip()
                 except (EOFError, KeyboardInterrupt):
                     console.print("\\n[bold yellow]👋 再见![/bold yellow]")
                     break
