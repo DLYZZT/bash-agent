@@ -4,34 +4,35 @@ Bash Agent - Intelligent Command Execution Agent.
 
 ## Features
 
-- 🤖 **Intelligent Command Execution**: Uses LLM to understand natural language instructions and generate corresponding Shell commands
-- 🔒 **Security Protection**: Built-in multiple security mechanisms to prevent dangerous command execution
-- 📁 **Isolated Work Environment**: All commands execute in a specified working directory to avoid accidental system file operations
-- ⚡ **Interactive Experience**: Supports REPL mode and single command execution
-- 🛡️ **Command Confirmation**: Configurable pre-execution confirmation mechanism to prevent accidental operations
-- 📊 **Detailed Feedback**: Provides command execution results, error messages, and exit codes
-- 🌐 **Cross-Platform Support**: Automatically detects the operating system (macOS/Linux/Windows) and executes appropriate commands for each platform
-- 🔌 **MCP Integration**: Supports connecting to Model Context Protocol (MCP) servers to extend tool capabilities
-- 💰 **Token Statistics**: Real-time tracking of API calls, token consumption, and estimated costs
+- 🤖 **Intelligent Command Execution**: Uses an LLM to understand natural language and generate Shell commands
+- 🔒 **Safety Guards**: Multiple built-in protections to prevent dangerous command execution
+- 📁 **Isolated Working Directory**: All commands run inside a designated work directory to avoid accidental system file modifications
+- ⚡ **Interactive UX**: Supports both REPL mode and single-shot command execution
+- 🛡️ **Execution Confirmation**: Optional pre-execution confirmation to avoid mistakes
+- 📊 **Detailed Feedback**: Shows stdout, stderr and exit code of each command
+- 🌐 **Cross-Platform**: Detects OS (macOS/Linux/Windows) and adapts commands accordingly
+- 🔌 **MCP Integration**: Connects to Model Context Protocol (MCP) servers to extend capabilities
+- 💰 **Token Statistics**: Real-time stats of API calls, token usage and estimated cost
+- 🗜️ **Smart Message Compression**: Automatically summarizes and compresses conversation history when nearing context limits
 
-## Security Mechanisms
+## Security
 
 ### Dangerous Command Interception
-- Blocks classic self-destruct commands (such as `rm -rf /`)
-- Intercepts system-level dangerous operations (such as `sudo`, `mkfs`, `shutdown`, etc.)
-- Prevents access to system sensitive directories (such as `/etc`, `/root`)
+- Blocks classic self-destruct commands (e.g. `rm -rf /`)
+- Intercepts system-level risky ops (`sudo`, `mkfs`, `shutdown`, etc.)
+- Prevents access to sensitive dirs (`/etc`, `/root`)
 
 ### Path Isolation
-- Restricts command execution within the specified working directory
+- Restricts execution to the configured working directory
 - Blocks absolute path access
-- Prevents path traversal attacks (`../` etc.)
+- Prevents path traversal (e.g. `../`)
 
 ### Timeout Protection
-- Default 30-second command execution timeout
-- Customizable timeout duration
-- Prevents long-running commands from blocking the system
+- Default 30s timeout per command
+- Configurable timeout
+- Avoids long-running commands blocking the system
 
-## Installation and Configuration
+## Installation & Configuration
 
 ### Requirements
 - Python 3.8+
@@ -42,31 +43,39 @@ Bash Agent - Intelligent Command Execution Agent.
 pip install -r requirements.txt
 ```
 
-### Environment Configuration
-1. Copy the environment variable template:
+### Environment Variables
+1) Copy template:
 ```bash
 cp .env.example .env
 ```
 
-2. Edit the `.env` file and configure the following variables:
+2) Edit `.env`:
 ```env
-# OpenAI API Key (required)
+# OpenAI API key (required)
 OPENAI_API_KEY=your_openai_api_key_here
 
-# OpenAI model name (optional, defaults to gpt-4o-mini)
+# OpenAI model name (optional, default: gpt-4o-mini)
 OPENAI_MODEL=gpt-4o-mini
 
-# Model temperature parameter (optional, defaults to 0.2)
+# Model temperature (optional, default: 0.2)
 MODEL_TEMPERATURE=0.2
 
-# Working directory (optional, defaults to ./work)
+# Working directory (optional, default: ./work)
 WORK_DIR=./work
 
-# Confirm before execution (optional, defaults to yes)
+# Confirm before execution (optional, default: yes)
 CONFIRM_BEFORE_EXEC=yes
 
-# MCP configuration file path (optional, defaults to ./mcp_config.json)
+# MCP config file path (optional, default: ./mcp_config.json)
 MCP_CONFIG_PATH=./mcp_config.json
+
+# Max context tokens (optional, default: 120000)
+# When exceeded, older messages are summarized and compressed automatically
+MAX_CONTEXT_TOKENS=120000
+
+# Number of most recent messages to keep (optional, default: 10)
+# These latest messages are preserved during compression
+KEEP_RECENT_MESSAGES=10
 ```
 
 ## Usage
@@ -76,23 +85,23 @@ MCP_CONFIG_PATH=./mcp_config.json
 python main.py
 ```
 
-After startup, you'll enter the interactive command line interface:
+You will enter an interactive REPL:
 ```
 Bash Agent. Type your goal or `exit` to quit.
 
 You> Create a file named test.txt with content "Hello World"
 ```
 
-### Single Command Mode
+### One-shot Command
 ```bash
 python main.py "List all files in the current directory"
 ```
 
-### Example Usage
+### Examples
 
 #### File Operations
 ```bash
-You> Create a Python file named hello.py with content containing a simple hello world function
+You> Create a Python file named hello.py with a simple hello world function
 ```
 
 #### View Token Statistics
@@ -100,73 +109,78 @@ You> Create a Python file named hello.py with content containing a simple hello 
 You> /stats
 ```
 
+#### Clear Conversation History
+```bash
+You> /clear
+```
+
+#### Manually Compress Conversation
+```bash
+You> /compress
+```
+Even if you are below the limit, you can manually compress to save tokens and cost.
+
 ## MCP Integration
 
-Bash Agent now supports the Model Context Protocol (MCP), allowing it to connect to multiple MCP servers simultaneously and use their provided tools.
+Bash Agent supports the Model Context Protocol (MCP) and can connect to multiple MCP servers to use their tools.
 
 ### What is MCP?
 
-Model Context Protocol (MCP) is an open protocol that allows AI applications to integrate with external tools and data sources in a standardized way. Through MCP, Bash Agent can:
+Model Context Protocol (MCP) is an open protocol for standardized integration between AI apps and external tools/data sources. With MCP, Bash Agent can:
 
 - Connect to multiple MCP servers simultaneously
-- Use tools provided by servers (such as database queries, API calls, file operations, etc.)
-- Extend the Agent's capabilities without modifying the core code
-- Utilize official and community servers from the MCP ecosystem
+- Use server-provided tools (database queries, API calls, filesystem ops, etc.)
+- Extend Agent capabilities without changing core code
+- Leverage official and community MCP servers
 
-### Configuring MCP Servers
+### Configure MCP Servers
 
-1. **Create Configuration File**
+1) Create a configuration file `mcp_config.json` in project root:
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/username/Desktop",
+        "/Users/username/Downloads"
+      ]
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "/path/to/database.db"
+      ]
+    }
+  }
+}
+```
 
-   Create a `mcp_config.json` file in the project root directory:
-   ```json
-   {
-     "mcpServers": {
-       "filesystem": {
-         "command": "npx",
-         "args": [
-           "-y",
-           "@modelcontextprotocol/server-filesystem",
-           "/Users/username/Desktop",
-           "/Users/username/Downloads"
-         ]
-       },
-       "sqlite": {
-         "command": "npx",
-         "args": [
-           "-y",
-           "@modelcontextprotocol/server-sqlite",
-           "/path/to/database.db"
-         ]
-       }
-     }
-   }
-   ```
+Notes:
+- Configure any number of MCP servers
+- Each entry requires `command` and `args`
+- Supports Node (`npx`) and Python (`python`) servers
+- Optional `env` for environment variables
 
-   **Configuration notes**:
-   - You can configure multiple MCP servers
-   - Each server requires `command` and `args`
-   - Supports Node.js (`npx`) and Python (`python`) servers
-   - Optional `env` environment variables
-
-2. **Start Bash Agent**
-
-   After configuration, start Bash Agent and it will automatically connect to all configured MCP servers:
-   ```bash
-   python main.py
-   ```
-
-   If connection is successful, you will see:
-   ```
-   📡 正在连接 2 个 MCP 服务器...
-   ✅ 已连接到 MCP 服务器 'filesystem'
-      工具: ['read_file', 'write_file', 'list_directory']
-   ✅ 已连接到 MCP 服务器 'sqlite'
-      工具: ['query', 'execute']
-   ✨ 成功连接 2/2 个 MCP 服务器
-   ```
+2) Start Bash Agent
+```bash
+python main.py
+```
+If connected successfully, you might see output similar to:
+```
+📡 Connecting to 2 MCP servers...
+✅ Connected to MCP server 'filesystem'
+   Tools: ['read_file', 'write_file', 'list_directory']
+✅ Connected to MCP server 'sqlite'
+   Tools: ['query', 'execute']
+✨ Connected 2/2 MCP servers
+```
 
 ### MCP Architecture
-
 ```
 ┌─────────────────┐
 │  Bash Agent     │
@@ -195,13 +209,22 @@ Model Context Protocol (MCP) is an open protocol that allows AI applications to 
 
 ```
 bash-agent/
-├── main.py              # Main program file
-├── mcp_client.py        # MCP client module
-├── requirements.txt     # Python dependencies
-├── prompts/
-│   └── system.md       # System prompt
-├── work/               # Working directory (isolated environment)
-└── README.md           # Project documentation
+├── main.py                           # Entry point
+├── src/
+│   ├── __init__.py
+│   ├── agent.py                      # Main Agent class
+│   ├── config.py                     # Environment & settings loader
+│   ├── security.py                   # Command safety checks
+│   ├── message_manager.py            # Message bookkeeping & compression
+│   ├── tool_handler.py               # Tool invocation handling
+│   ├── mcp_client.py                 # MCP client integrations
+│   └── cli.py                        # Console helpers & prompts
+├── requirements.txt                  # Python dependencies
+├── prompts/                          # Prompt templates
+│   ├── system.md                     # System prompt
+│   └── summary.md                    # Summary prompt for message compression
+├── work/                             # Isolated working directory
+└── README.md                         # Project documentation
 ```
 
 ## License
@@ -210,4 +233,4 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## Disclaimer
 
-This tool is intended for legitimate software development and operations tasks only. Users are responsible for their own usage risks, and developers are not liable for any losses. Please comply with relevant laws, regulations, and best practices.
+This tool is intended for legitimate software development and operations tasks only. Users assume all risks for their usage. The authors are not responsible for any damages. Please follow applicable laws, regulations, and best practices.
