@@ -99,6 +99,11 @@ python main.py "List all files in the current directory"
 
 ### Examples
 
+#### View Help Information
+```bash
+You> /help
+```
+
 #### File Operations
 ```bash
 You> Create a Python file named hello.py with a simple hello world function
@@ -155,8 +160,19 @@ Model Context Protocol (MCP) is an open protocol for standardized integration be
         "@modelcontextprotocol/server-sqlite",
         "/path/to/database.db"
       ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-chrome-devtools"
+      ]
     }
-  }
+  },
+  "enabled_servers": [
+    "filesystem",
+    "chrome-devtools"
+  ]
 }
 ```
 
@@ -165,6 +181,7 @@ Notes:
 - Each entry requires `command` and `args`
 - Supports Node (`npx`) and Python (`python`) servers
 - Optional `env` for environment variables
+- **Optional `enabled_servers` array**: If provided, only servers listed here will be loaded. This allows you to keep all server configurations but selectively enable/disable them without removing configurations. If omitted or `null`, all servers in `mcpServers` will be loaded.
 
 2) Start Bash Agent
 ```bash

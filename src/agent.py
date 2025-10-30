@@ -103,6 +103,46 @@ class Agent:
         for key in self.token_stats:
             self.token_stats[key] = 0
 
+    def _show_help(self) -> None:
+        """显示帮助信息"""
+        help_text = """
+[bold cyan]📖 Bash Agent 帮助[/bold cyan]
+
+[bold yellow]可用命令：[/bold yellow]
+  [cyan]/help[/cyan]      - 显示此帮助信息
+  [cyan]/stats[/cyan]     - 显示 Token 使用统计
+  [cyan]/clear[/cyan]     - 清空对话历史和 Token 统计
+  [cyan]/compress[/cyan]  - 手动压缩消息历史
+  [cyan]/exit[/cyan]      - 退出程序（或使用 quit）
+  [cyan]Ctrl+L[/cyan]     - 清屏
+
+[bold yellow]使用说明：[/bold yellow]
+  • 输入自然语言指令，Agent 会生成并执行相应的 Shell 命令
+  • 工作目录：[cyan]{work_dir}[/cyan]
+  • 操作系统：[cyan]{os_name}[/cyan]
+  • Shell 类型：[cyan]{shell_type}[/cyan]
+
+[bold yellow]MCP 集成：[/bold yellow]
+  • MCP 状态：[cyan]{mcp_status}[/cyan]
+{mcp_details}
+"""
+        mcp_status, mcp_details = self._collect_mcp_info()
+
+        # 格式化 MCP 详情
+        if mcp_details:
+            mcp_details_formatted = mcp_details
+        else:
+            mcp_details_formatted = ""
+
+        formatted_help = help_text.format(
+            work_dir=self.config.work_dir,
+            os_name=self.config.os_name,
+            shell_type=self.config.shell_type,
+            mcp_status=mcp_status,
+            mcp_details=mcp_details_formatted,
+        )
+        self.console.print(formatted_help)
+
     def _collect_mcp_info(self) -> tuple[str, str]:
         if not self.mcp_manager or not self.mcp_manager.is_connected():
             return "未连接", ""
@@ -188,6 +228,11 @@ class Agent:
                 self.console.print("[bold yellow]👋 再见![/bold yellow]")
                 self.show_token_stats()
                 break
+
+            if user_input.lower() == "/help":
+                self.logger.debug("用户查看帮助信息")
+                self._show_help()
+                continue
 
             if user_input.lower() == "/clear":
                 self.logger.info("用户执行清空对话命令")

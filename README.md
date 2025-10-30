@@ -99,6 +99,11 @@ python main.py "列出当前目录下的所有文件"
 
 ### 示例用法
 
+#### 查看帮助信息
+```bash
+You> /help
+```
+
 #### 文件操作
 ```bash
 You> 创建一个名为 hello.py 的 Python 文件，内容包含一个简单的 hello world 函数
@@ -157,8 +162,19 @@ Model Context Protocol (MCP) 是一个开放协议，允许 AI 应用程序与�
            "@modelcontextprotocol/server-sqlite",
            "/path/to/database.db"
          ]
+       },
+       "chrome-devtools": {
+         "command": "npx",
+         "args": [
+           "-y",
+           "@modelcontextprotocol/server-chrome-devtools"
+         ]
        }
-     }
+     },
+     "enabled_servers": [
+       "filesystem",
+       "chrome-devtools"
+     ]
    }
    ```
 
@@ -167,6 +183,7 @@ Model Context Protocol (MCP) 是一个开放协议，允许 AI 应用程序与�
    - 每个服务器需要指定 `command` 和 `args`
    - 支持 Node.js (`npx`) 和 Python (`python`) 服务器
    - 可选配置 `env` 环境变量
+   - **可选 `enabled_servers` 数组**：如果提供，则只加载列表中的服务器。这样可以保留所有服务器配置，但选择性地启用/禁用它们，无需删除配置。如果省略或为 `null`，则加载 `mcpServers` 中的所有服务器。
 
 2. **启动 Bash Agent**
 
