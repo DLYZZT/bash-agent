@@ -22,7 +22,18 @@
         "@modelcontextprotocol/server-sqlite",
         "/path/to/database.db"
       ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-chrome-devtools"
+      ]
     }
-  }
+  },
+  "enabled_servers": [
+    "filesystem",
+    "chrome-devtools"
+  ]
 }
 

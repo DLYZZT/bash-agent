@@ -127,7 +127,7 @@ class MCPServerConnection:
                 "content": content_list,
                 "is_error": is_error,
             }
-        except Exception as exc:  # pragma: no cover - infrastructure dependent
+        except Exception as exc:
             logger.error(f"MCP 工具 '{tool_name}' 执行异常: {exc}", exc_info=True)
             return {
                 "success": False,
@@ -172,7 +172,8 @@ class MCPClient:
         从配置字典连接到所有 MCP 服务器
 
         Args:
-            config: MCP 配置字典，格式为 {"mcpServers": {...}}
+            config: MCP 配置字典，格式为 {"mcpServers": {...}, "enabled_servers": [...]}
+                   如果提供了 enabled_servers，则只连接列表中的服务器
 
         Returns:
             int: 成功连接的服务器数量
@@ -183,7 +184,21 @@ class MCPClient:
             print("⚠️  配置中没有 MCP 服务器")
             return 0
 
-        print(f"📡 正在连接 {len(mcp_servers)} 个 MCP 服务器...")
+        # 检查是否有 enabled_servers 配置
+        enabled_servers = config.get("enabled_servers")
+        if enabled_servers is not None:
+            # 过滤出启用的服务器
+            mcp_servers = {
+                name: server_config
+                for name, server_config in mcp_servers.items()
+                if name in enabled_servers
+            }
+            if not mcp_servers:
+                print("⚠️  没有启用任何 MCP 服务器（enabled_servers 为空或无匹配）")
+                return 0
+            print(f"📡 正在连接 {len(mcp_servers)} 个已启用的 MCP 服务器...")
+        else:
+            print(f"📡 正在连接 {len(mcp_servers)} 个 MCP 服务器...")
 
         success_count = 0
         for name, server_config in mcp_servers.items():
@@ -250,7 +265,7 @@ class MCPClient:
         """清理资源"""
         try:
             await self.exit_stack.aclose()
-        except Exception:  # pragma: no cover - defensive
+        except Exception:
             pass
 
     def is_connected(self) -> bool:
@@ -313,7 +328,7 @@ class MCPClientManager:
             logger.error(f"MCP 配置文件格式错误: {exc}", exc_info=True)
             print(f"❌ 配置文件格式错误: {exc}")
             return False
-        except Exception as exc:  # pragma: no cover - defensive
+        except Exception as exc:
             logger.error(f"MCP 连接失败: {exc}", exc_info=True)
             print(f"❌ 连接失败: {exc}")
             return False
@@ -362,7 +377,7 @@ class MCPClientManager:
 
         try:
             return self.loop.run_until_complete(self.client.call_tool(tool_name, arguments))
-        except Exception as exc:  # pragma: no cover - defensive
+        except Exception as exc:
             return {
                 "success": False,
                 "error": str(exc),
@@ -389,13 +404,13 @@ class MCPClientManager:
                     try:
                         self.loop.run_until_complete(self.client.cleanup())
                         logger.debug("MCP 客户端清理完成")
-                    except Exception as exc:  # pragma: no cover - defensive
+                    except Exception as exc:
                         logger.error(f"清理 MCP 客户端时出错: {exc}")
                     try:
                         self.loop.close()
                         logger.debug("事件循环已关闭")
-                    except Exception as exc:  # pragma: no cover - defensive
+                    except Exception as exc:
                         logger.error(f"关闭事件循环时出错: {exc}")
                 self._is_running = False
-            except Exception as exc:  # pragma: no cover - defensive
+            except Exception as exc:
                 logger.error(f"MCP 清理过程异常: {exc}")
