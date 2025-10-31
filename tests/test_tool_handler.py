@@ -11,6 +11,7 @@ from src.tool_handler import ToolHandler
 def make_config(tmp_path):
     work_dir = tmp_path / "work"
     work_dir.mkdir()
+    log_file = tmp_path / "test.log"
     return Config(
         openai_api_key="test",
         openai_model="gpt-test",
@@ -23,6 +24,7 @@ def make_config(tmp_path):
         os_name="Linux",
         shell_type="bash",
         project_root=tmp_path,
+        log_file=log_file,
     )
 
 

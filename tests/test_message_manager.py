@@ -37,6 +37,7 @@ def make_manager(tmp_path, keep_recent=2, max_tokens=50):
 
     work_dir = tmp_path / "work"
     work_dir.mkdir()
+    log_file = tmp_path / "test.log"
     config = Config(
         openai_api_key="key",
         openai_model="model",
@@ -49,6 +50,7 @@ def make_manager(tmp_path, keep_recent=2, max_tokens=50):
         os_name="Linux",
         shell_type="bash",
         project_root=project_root,
+        log_file=log_file,
     )
 
     console = Console(record=True)

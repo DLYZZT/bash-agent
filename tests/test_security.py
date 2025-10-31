@@ -7,6 +7,7 @@ from src.security import is_obviously_dangerous, is_outside_workdir, run_bash
 def make_config(tmp_path: Path) -> Config:
     work_dir = tmp_path / "work"
     work_dir.mkdir()
+    log_file = tmp_path / "test.log"
     return Config(
         openai_api_key="test",
         openai_model="gpt-test",
@@ -19,6 +20,7 @@ def make_config(tmp_path: Path) -> Config:
         os_name="Linux",
         shell_type="bash",
         project_root=tmp_path,
+        log_file=log_file,
     )
 
 
